@@ -1,147 +1,135 @@
 <html>
-  <head>
-    <title>test</title>
-    <script src="https://js.leapmotion.com/leap-0.6.4.js"></script>
-    
-    <script type="text/javascript">
-    var box1;
+
+<head>
+  <title>test</title>
+  <script src="https://js.leapmotion.com/leap-0.6.4.js"></script>
+  <script src="js/helper.js"></script>
+  <script src="js/tests.js"></script>
+  <script src="js/swipedetector.js"></script>
+  <script type="text/javascript">
+    var box1, box2, box3;
     var ticks = 0;
     var tickDelta = 100;
     var lastHand;
-    function moveBox(dir,hand)
-    {
+
+    function moveBox(dir, hand) {
       var change = 100;
       var now = new Date().getTime();
-      if(now - ticks > tickDelta || (hand != lastHand))
-      {
+      if (now - ticks > tickDelta || (hand != lastHand)) {
         ticks = now;
         lastHand = hand;
-      }
-      else{
+      } else {
         return;
       }
       var boxToMove = box1;
-      if(hand == "right")
-      {
+      if (hand == "right") {
         boxToMove = box2;
       }
       var left = boxToMove.offsetLeft;
       var top = boxToMove.offsetTop;
-      if(dir == "up" )
-      {
-        top = top-change;
-      } 
-      else if(dir == "down")
-      {
-        top = top+change;
-      } 
-      else if(dir == "right")
-      {
+      if (dir == "up") {
+        top = top - change;
+      } else if (dir == "down") {
+        top = top + change;
+      } else if (dir == "right") {
         left = left + change;
+      } else if (dir == "left") {
+        left = left - change;
       }
-      else if(dir == "left")
-      {
-        left = left -change;
-      }
-        boxToMove.style.left = left+"px";
-        boxToMove.style.top = top+"px";
-        boxToMove.innerHTML = left + " " + top;
+      boxToMove.style.left = left + "px";
+      boxToMove.style.top = top + "px";
+      boxToMove.innerHTML = left + " " + top;
     }
-    function initLeap()
-    {
+
+    function initLeap() {
       var output = document.getElementById('output');
-      var frameString = "", handString = "", fingerString = "";
+      var frameString = "",
+        handString = "",
+        fingerString = "";
       var hand, finger;
       box1 = document.getElementById("box1");
       box2 = document.getElementById("box2");
-      // Leap.loop uses browser's requestAnimationFrame
-      var options = { enableGestures: true };
-      
-      // Main Leap Loop
-      var frameString = "";    
-      Leap.loop(options, function(frame) {
-        if(frame.valid && frame.gestures.length > 0)
-        {
-          console.log("Gestures " + frame.gestures.length);
-          frame.gestures.forEach(function(gesture)
-          {
-            if(gesture.type == "swipe")
-            {
-              var isHorizontal = Math.abs(gesture.direction[0]) > Math.abs(gesture.direction[1]);
-              //Classify as right-left or up-down
-              if(isHorizontal){
-                  if(gesture.direction[0] > 0){
-                      swipeDirection = "right";
-                  } else {
-                      swipeDirection = "left";
-                  }
-              } else { //vertical
-                  if(gesture.direction[1] > 0){
-                      swipeDirection = "up";
-                  } else {
-                      swipeDirection = "down";
-                  }                  
-              }
-              console.log(swipeDirection)
-              if(gesture.state == "start"){
-                gesture.handIds.forEach(function(id){
-                  var hand = frame.hand(id);
-                  moveBox(swipeDirection, hand.type);
-                  
-                });
-              }
-              frameString = swipeDirection + " " + gesture.state + " " + gesture.speed; 
-            }
-          });
-        }
-        output.innerHTML = frameString;      
+      box3 = document.getElementById("box3");
+      SwipeDetector.Enabled = false;
+      var options = {
+        enableGestures: true
+      };
+      document.addEventListener("swipe",function(evt){
+          moveBox(evt.detail.direction,evt.detail.hand);
       });
-    }
-    
-    function concatData(id, data) {
-      return id + ": " + data + "<br>";
-    }
-    
-    
-    function getFingerName(fingerType) {
-      switch(fingerType) {
-        case 0:
-          return 'Thumb';
-        break;
-    
-        case 1:
-          return 'Index';
-        break;
-    
-        case 2:
-          return 'Middle';
-        break;
-    
-        case 3:
-          return 'Ring';
-        break;
-    
-        case 4:
-          return 'Pinky';
-        break;
+      document.addEventListener("motion",function(evt){
+         // output.innerHTML = evt.detail.position[0] + "<br>" + evt.detail.position[1] + "<br>" + evt.detail.position[2] + "<br>" + evt.detail.dist;
+          var factorX = 2;
+          var factorY = 1.3;
+          var filteredX = (factorX * evt.detail.position[0] + 250) | 0;
+          var filteredY =  (500 - factorY * evt.detail.position[1]) | 0;
+          var size = 2 * evt.detail.dist | 0;
+          moveBox3(filteredX, filteredY, size);
+      });
+      // Main Leap Loop
+      var frameString = "";
+      Leap.loop(options, function(frame) {
+          if (frame.valid) {
+            SwipeDetector.HandleLeapFrame(frame);
+            MotionTest.HandleLeapFrame(frame);
+          }
+        });
       }
-    }
-    
-    function concatJointPosition(id, position) {
-      return id + ": " + position[0] + ", " + position[1] + ", " + position[2] + "<br>";
-    }
-    
-    </script>    
-  </head>
 
-  <body>
-    <div style="width:100% ;height:100%">
-      <div id="output"></div>
-      <div id="box1" style="height:100px;width:100px; position:absolute;top:200;left:100;background-color:blue"></div>
-      <div id="box2" style="height:100px;width:100px; position:absolute;top:200;left:400;background-color:green"></div>
-    </div>    
-    <script type="text/javascript">
-      initLeap();
-    </script>
-  </body>
+      function moveBox3(x,y, size)
+      {
+
+          box3.style.width = size + "px";
+          box3.style.height = size + "px";
+          box3.style.left = x + "px";
+          box3.style.top = y + "px";
+
+      }
+      function concatData(id, data) {
+        return id + ": " + data + "<br>";
+      }
+
+
+      function getFingerName(fingerType) {
+        switch (fingerType) {
+          case 0:
+            return 'Thumb';
+            break;
+
+          case 1:
+            return 'Index';
+            break;
+
+          case 2:
+            return 'Middle';
+            break;
+
+          case 3:
+            return 'Ring';
+            break;
+
+          case 4:
+            return 'Pinky';
+            break;
+        }
+      }
+
+      function concatJointPosition(id, position) {
+        return id + ": " + position[0] + ", " + position[1] + ", " + position[2] + "<br>";
+      }
+  </script>
+</head>
+
+<body>
+  <div style="width:100% ;height:100%">
+    <div id="box3" style="height:100px;width:100px; position:absolute;top:200;left:400;background-color:red"></div>
+    <div id="box1" style="height:100px;width:100px; position:absolute;top:200;left:100;background-color:blue"></div>
+    <div id="box2" style="height:100px;width:100px; position:absolute;top:200;left:400;background-color:green"></div>
+    <div id="output"></div>
+  </div>
+  <script type="text/javascript">
+    initLeap();
+  </script>
+</body>
+
 </html>
